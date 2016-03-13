@@ -31,6 +31,45 @@ solo = AudioStream(sampling_rate, 1)
 blues_scale = [25, 28, 30, 31, 32, 35, 37, 40, 42, 43, 44, 47, 49, 52, 54, 55, 56, 59, 61]
 beats_per_minute = 45				# Let's make a slow blues solo
 
-add_note(solo, bass, blues_scale[0], 1.0, beats_per_minute, 1.0)
+curr_note = 6
+curr_vol = 0.5
+dynamicness = 0.05
+add_note(solo, bass, blues_scale[curr_note], 1.0, beats_per_minute, curr_vol)
 
-solo >> "blues_solo.wav"
+licks =   [ [ [1, 0.5], [1, 0.5], [1, 0.5], [1, 0.5] ],
+            [ [-1, 0.5], [-1, 0.5], [-1, 0.5], [-1, 0.5] ],
+            [ [-1, 1.0], [1, 0.5], [-1, 0.5] ],
+            [ [1, 0.5], [1, 0.5], [1, 0.5], [-2, 0.25], [2, 0.25] ],
+            [ [-1, 0.7], [1, 0.3], [-1, 0.7], [1, 0.3] ],
+            [ [1, 0.7], [-2, 0.3], [1, 0.7], [-2, 0.3] ],
+            [ [1, 0.5], [1, 0.5], [1, 0.25], [1, 0.5], [-5, 0.25] ] ]
+
+dynamics = [ [1], [-1], [1,-1], [-1,1], [0,0], [0,0,2], [-3,1,0] ]
+
+for i in range(16):
+    lick = choice(licks)
+    dynm = choice(dynamics)
+    for ind, note in enumerate(lick):
+
+        curr_note += note[0]
+        if curr_note < 0 or curr_note >= len(blues_scale):
+            curr_note = 6
+            
+        curr_vol += dynm[ind*len(dynm)/len(lick)]*curr_vol*dynamicness
+        if curr_vol <= 0.0 or curr_vol > 1.0:
+            curr_vol = 0.5
+
+        add_note(solo, bass, blues_scale[curr_note], note[1], beats_per_minute, curr_vol)
+
+backing_track = AudioStream(sampling_rate, 1)
+Wavefile.read('backing.wav', backing_track)
+
+m = Mixer()
+
+solo *= 0.4             # adjust relative volumes to taste
+backing_track *= 2.0
+
+m.add(2.25, 0, solo)    # delay the solo to match up with backing track    
+m.add(0, 0, backing_track)
+
+m.getStream(500.0) >> "slow_blues.wav"
